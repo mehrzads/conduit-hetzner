@@ -83,6 +83,7 @@ The token is required. Everything else has sensible defaults.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HETZNER_API_TOKEN` | *(required)* | Your Hetzner Cloud API token |
+| `SERVER_NAME` | `node-<timestamp>` | Name for the created server |
 | `SSH_KEY_NAME` | *(none)* | Name of the SSH key you uploaded to Hetzner |
 | `SERVER_TYPE` | `cpx11` | Server size ([see options](https://www.hetzner.com/cloud#pricing)) |
 | `LOCATION` | `ash` | Datacenter location |
@@ -134,7 +135,7 @@ Opens an SSH connection to the server. No need to remember the IP — just use t
 ./hetzner run <server-id>
 ```
 
-Downloads and runs the Conduit installation script on the server.
+Downloads and runs the [Conduit installation script](https://github.com/SamNet-dev/conduit-manager/blob/main/conduit.sh) on the server. The full install log is saved to `/tmp/conduit-install-<server-id>.log`.
 
 ### Check Conduit stats
 
@@ -187,6 +188,40 @@ Creates 5 servers and installs Conduit on all of them automatically.
 # Done with it? Delete it
 ./hetzner delete 12345
 ```
+
+## Sample Report
+
+Running `./hetzner report` produces output like this:
+
+```
+═══════════════════════════════════════════════════════════════════
+                   CONDUIT CLUSTER STATS REPORT
+                   Generated: 2025-07-15 14:32:01
+═══════════════════════════════════════════════════════════════════
+
+Server: node-1 (ID: 61294401, IP: 65.109.12.34)
+───────────────────────────────────────────────────────────────────
+[STATS] Connecting: 42 | Connected: 38 | Uptime: 3d 7h 12m
+
+Server: node-2 (ID: 61294402, IP: 65.109.56.78)
+───────────────────────────────────────────────────────────────────
+[STATS] Connecting: 55 | Connected: 51 | Uptime: 3d 7h 10m
+
+Server: node-3 (ID: 61294403, IP: 95.217.90.12)
+───────────────────────────────────────────────────────────────────
+[STATS] Connecting: 37 | Connected: 35 | Uptime: 2d 18h 44m
+
+═══════════════════════════════════════════════════════════════════
+                           SUMMARY
+═══════════════════════════════════════════════════════════════════
+Total Servers:      3
+Running Conduit:    3
+Total Connecting:   134
+Total Connected:    124
+═══════════════════════════════════════════════════════════════════
+```
+
+The report is also saved to a timestamped file (e.g. `conduit-report-20250715-143201.txt`).
 
 ## Troubleshooting
 

@@ -390,13 +390,27 @@ run_conduit() {
     echo ""
 
     # Run the conduit installation script on the remote server
-    # The script launches an interactive stats viewer at the end, so we kill it after 180 seconds
-    # This disconnects our SSH session without affecting the conduit service
-    ( ssh -o StrictHostKeyChecking=no root@$SERVER_IP 'yes "" | curl -sL https://raw.githubusercontent.com/SamNet-dev/conduit-manager/main/conduit.sh | sudo bash' 2>&1 & SSH_PID=$! ; sleep 180 ; kill $SSH_PID 2>/dev/null ) || true
+    # Full output is saved to a log file; only a progress indicator is shown
+    LOG_FILE="/tmp/conduit-install-$SERVER_ID.log"
+
+    ( ssh -o StrictHostKeyChecking=no root@$SERVER_IP 'yes "" | curl -sL https://raw.githubusercontent.com/SamNet-dev/conduit-manager/main/conduit.sh | sudo bash' > "$LOG_FILE" 2>&1 & SSH_PID=$! ; sleep 180 ; kill $SSH_PID 2>/dev/null ) &
+    BG_PID=$!
+
+    # Show a simple progress spinner while the install runs
+    SPIN='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    while kill -0 $BG_PID 2>/dev/null; do
+        for (( i=0; i<${#SPIN}; i++ )); do
+            kill -0 $BG_PID 2>/dev/null || break
+            printf "\r  ${SPIN:$i:1} Installing..."
+            sleep 0.2
+        done
+    done
+    wait $BG_PID 2>/dev/null || true
+    printf "\r                    \r"
 
     echo ""
-    print_success "Conduit installation completed successfully!"
-    print_info "Conduit is now running on $SERVER_NAME"
+    print_success "Conduit installation completed on $SERVER_NAME!"
+    print_info "Full install log: $LOG_FILE"
     echo ""
     echo "Use './hetzner stats $SERVER_ID' to view performance metrics"
 }
