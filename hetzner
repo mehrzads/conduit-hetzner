@@ -444,8 +444,10 @@ stats_conduit() {
     # Temporarily disable exit on error for this command
     set +e
 
-    # Use a timeout wrapper to kill SSH after 5 seconds and capture stats output
-    STATS=$(( ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@$SERVER_IP 'conduit stats 2>/dev/null' & SSH_PID=$! ; sleep 5 ; kill $SSH_PID 2>/dev/null ; wait $SSH_PID 2>/dev/null ) 2>&1 | grep "^\[STATS\]" | head -n 2 )
+    # Use -t for TTY (some nodes require it for conduit stats output)
+    # Use remote timeout to kill conduit stats after 8 seconds
+    # Strip \r from TTY output, match [STATS] lines with actual metrics (not header)
+    STATS=$(ssh -t -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@$SERVER_IP 'timeout 8 conduit stats 2>/dev/null' 2>/dev/null | tr -d '\r' | grep "\[STATS\].*Connecting" | head -n 2 | sed 's/.*\(\[STATS\]\)/\1/' )
 
     RESULT_CODE=$?
     set -e
@@ -537,15 +539,9 @@ report_stats() {
             OUTPUT+="Status: Conduit not installed\n"
         else
             # Conduit is installed, try to get stats
-            # Run in background and kill after 5 seconds
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@$SERVER_IP 'conduit stats 2>/dev/null' > /tmp/conduit-stats-$SERVER_ID.tmp 2>&1 &
-            SSH_PID=$!
-            sleep 5
-            kill $SSH_PID 2>/dev/null || true
-            wait $SSH_PID 2>/dev/null || true
-
-            STATS=$(grep "^\[STATS\]" /tmp/conduit-stats-$SERVER_ID.tmp 2>/dev/null | head -n 1 || echo "")
-            rm -f /tmp/conduit-stats-$SERVER_ID.tmp
+            # Use -t for TTY (some nodes require it for conduit stats output)
+            # Use remote timeout, strip \r, match [STATS] with actual metrics (not header)
+            STATS=$(ssh -t -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@$SERVER_IP 'timeout 8 conduit stats 2>/dev/null' 2>/dev/null | tr -d '\r' | grep "\[STATS\].*Connecting" | head -n 1 | sed 's/.*\(\[STATS\]\)/\1/' || echo "")
 
             if [ -n "$STATS" ]; then
                 OUTPUT+="$STATS\n"
